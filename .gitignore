@@ -1,0 +1,11 @@
+# pacotes originais e animações soltas: o jogo usa só os arquivos já convertidos
+assets/*.zip
+assets/Idle.fbx
+assets/Jump.fbx
+assets/Pistol Idle.fbx
+assets/Walking.fbx
+assets/Punching.fbx
+assets/Fast Run.fbx
+assets/Swimming.fbx
+__pycache__/
+.vercel
