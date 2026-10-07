@@ -2882,7 +2882,9 @@ function mpStart(asHost, code) {
   MP.name = (($('mpName') && $('mpName').value.trim()) || 'Jogador').slice(0, 12); try { localStorage.setItem('pedro_nome', MP.name); } catch (e) { /* ignora */ }
   MP.host = asHost; MP.room = asHost ? Math.random().toString(36).slice(2, 6).toUpperCase().replace(/[^A-Z0-9]/g, 'X').padEnd(4, 'X') : code.toUpperCase();
   mpStatus(asHost ? 'Criando sala...' : 'Entrando na sala ' + MP.room + '...');
-  const peer = MP.peer = asHost ? new Peer(ROOM_PREFIX + MP.room) : new Peer();
+  const popt = { config: { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] }] } };
+  const peer = MP.peer = asHost ? new Peer(ROOM_PREFIX + MP.room, popt) : new Peer(popt);
+  setTimeout(() => { if (MP.peer === peer && !peer.open && !peer.destroyed) mpStatus('Sem resposta do servidor de salas. Confira a internet e tente de novo.'); }, 12000);
   peer.on('error', err => {
     if (err.type === 'unavailable-id' && asHost) { mpStart(true); return; }
     mpStatus(err.type === 'peer-unavailable' ? 'Sala ' + MP.room + ' não encontrada.' : 'Erro de rede: ' + err.type);
@@ -2904,6 +2906,11 @@ function mpStart(asHost, code) {
     } else {
       const conn = MP.hostConn = peer.connect(ROOM_PREFIX + MP.room, { reliable: true });
       conn.on('open', () => { MP.on = true; mpInfo(); mpStatus('Conectado à sala ' + MP.room + '! Clique em JOGAR.'); });
+      setTimeout(() => { // a conexão é direta entre os computadores: algumas redes bloqueiam
+        if (MP.peer !== peer || conn.open) return; const pc = conn.peerConnection, ice = pc ? pc.iceConnectionState : 'sem resposta';
+        mpStatus('Não deu para ligar direto com o anfitrião (' + ice + '). A rede de um dos dois está bloqueando.'); console.warn('[mp] falha ao conectar', ice, pc && pc.connectionState);
+        try { peer.destroy(); } catch (e) { /* ignora */ } MP.peer = null;
+      }, 15000);
       conn.on('data', mpHandle);
       conn.on('close', () => { toast('O anfitrião saiu: a sala fechou', 4000); mpLeave(); });
     }
